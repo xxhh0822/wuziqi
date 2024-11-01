@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五子棋</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/vue@2/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            margin: 0;
+        }
+        #app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            width: 100%;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 1 / 1; /* 确保棋盘是正方形 */
+            position: relative;
+            margin: 0 auto;
+        }
+        .cell {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: #f0d1b1;
+            border: 1px solid #333;
+            cursor: pointer;
+        }
+        .intersection {
+            position: absolute;
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .black {
+            background-color: black;
+        }
+        .white {
+            background-color: white;
+            border: 1px solid black;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        .current-turn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            color: white;
+            border: none;
+        }
+        .current-turn.black {
+            background-color: black;
+        }
+        .current-turn.white {
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="board">
+        <div class="cell" v-for="(cell, index) in cells" :key="index" @click="handleCellClick(index)">
+            <div v-if="cell === 'black'" class="intersection black" :style="{ top: '50%', left: '50%' }"></div>
+            <div v-if="cell === 'white'" class="intersection white" :style="{ top: '50%', left: '50%' }"></div>
+        </div>
+    </div>
+    <div class="controls">
+        <el-alert v-if="winner" :title="winner + ' wins!'" type="success" @close="resetGame"></el-alert>
+        <el-button class="current-turn" :class="currentPlayer" size="medium" style="width: 120px;">
+            轮到: {{ currentPlayer === 'black' ? '黑棋' : '白棋' }}
+        </el-button>
+        <el-button type="danger" @click="undoMove" :disabled="!previousMoves.length" size="medium" style="width: 120px;">
+            悔棋: {{ currentPlayer === 'black' ? '白棋' : '黑棋' }}
+        </el-button>
+    </div>
+</div>
+
+<script>
+    new Vue({
+        el: '#app',
+        data() {
+            return {
+                cells: Array(225).fill(null),
+                currentPlayer: 'black',
+                winner: null,
+                previousMoves: [],
+            };
+        },
+        methods: {
+            handleCellClick(index) {
+                if (this.cells[index] || this.winner) return;
+                this.$set(this.cells, index, this.currentPlayer);
+                this.previousMoves.push(index);
+                if (this.checkWin(index)) {
+                    this.winner = this.currentPlayer;
+                }
+                this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+            },
+            checkWin(index) {
+                const row = Math.floor(index / 15);
+                const col = index % 15;
+                const directions = [
+                    [1, 0],
+                    [0, 1],
+                    [1, 1],
+                    [1, -1]
+                ];
+                for (const [dx, dy] of directions) {
+                    let count = 1;
+                    count += this.countDirection(row, col, dx, dy);
+                    count += this.countDirection(row, col, -dx, -dy);
+                    if (count >= 5) return true;
+                }
+                return false;
+            },
+            countDirection(row, col, dx, dy) {
+                let count = 0;
+                let x = row + dx;
+                let y = col + dy;
+                while (x >= 0 && x < 15 && y >= 0 && y < 15 && this.cells[x * 15 + y] === this.currentPlayer) {
+                    count++;
+                    x += dx;
+                    y += dy;
+                }
+                return count;
+            },
+            undoMove() {
+                if (this.previousMoves.length === 0) return;
+                const lastMove = this.previousMoves.pop();
+                this.$set(this.cells, lastMove, null);
+                this.currentPlayer = this.currentPlayer === 'black' ? 'white' : 'black';
+                this.winner = null;
+            },
+            resetGame() {
+                this.cells = Array(225).fill(null);
+                this.winner = null;
+                this.currentPlayer = 'black';
+                this.previousMoves = [];
+            }
+        }
+    });
+</script>
+</body>
+</html>
